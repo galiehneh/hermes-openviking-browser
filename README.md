@@ -1,5 +1,9 @@
 # OpenViking Browser for Hermes
 
+[![CI](https://github.com/galiehneh/hermes-openviking-browser/actions/workflows/ci.yml/badge.svg)](https://github.com/galiehneh/hermes-openviking-browser/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/galiehneh/hermes-openviking-browser)](https://github.com/galiehneh/hermes-openviking-browser/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A read-only [OpenViking](https://github.com/volcengine/OpenViking) browser for the
 [Hermes Agent](https://github.com/NousResearch/hermes-agent) dashboard. It adds an **OpenViking** tab where you can
 look at server status, walk the `viking://` tree, read abstracts / overviews / content, and search, without leaving

@@ -182,6 +182,7 @@
     const [mode, setMode] = useState("abstract");
     const [content, setContent] = useState({ text: "", offset: 0, done: false, loading: false, error: null });
     const reqId = useRef(0);
+    const isDirEntry = !!(entry && typeof entry === "object" && entry.isDir === true);
 
     const ab = useLoad(
       () => (mode === "content" ? Promise.resolve(null) : get("/" + mode, { uri })),
@@ -213,12 +214,14 @@
     }, [uri]);
 
     useEffect(() => {
-      if (mode === "content") loadMore(true);
+      if (mode === "content" && !isDirEntry) loadMore(true);
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mode, uri]);
 
     let body;
-    if (mode === "content") {
+    if (mode === "content" && isDirEntry) {
+      body = h("div", { className: "ovb-muted" }, "This is a directory. Open it with \u203a to list its files, then select a file to read its content.");
+    } else if (mode === "content") {
       body = h("div", null,
         content.error ? h("div", { className: "ovb-err" }, content.error) : null,
         content.text ? h("pre", null, content.text)
@@ -244,7 +247,7 @@
         fmtBytes(e.size) ? h("span", null, fmtBytes(e.size)) : null,
         e.modTime ? h("span", null, fmtDate(e.modTime)) : null),
       h("div", { className: "ovb-tabs", style: { marginBottom: 10 } },
-        ["abstract", "overview", "content"].map((m) =>
+        (isDirEntry ? ["abstract", "overview"] : ["abstract", "overview", "content"]).map((m) =>
           h("button", { key: m, className: mode === m ? "on" : "", onClick: () => setMode(m) }, m))),
       body);
   }

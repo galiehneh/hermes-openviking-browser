@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] - 2026-10-05
+
+### Fixed
+- Reader: directories no longer offer the "content" tab. OpenViking stores every document as a directory
+  (a file named `x.md` is really a folder containing `x.md`), so reading one failed with
+  "Directory URI is not readable as a file". The reader now explains how to open the directory.
+
 ## [1.0.0] - 2026-10-05
 
 Initial public release.

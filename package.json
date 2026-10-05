@@ -1,6 +1,6 @@
 {
   "name": "hermes-openviking-browser",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Dev-only manifest: dependencies for the dashboard render test. The plugin itself has no runtime dependencies.",
   "license": "MIT",

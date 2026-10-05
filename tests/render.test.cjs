@@ -118,7 +118,13 @@ async function settle() { for (let i = 0; i < 6; i++) await act(async () => { aw
   if (!REAL_API) {
     assert(/projects/.test(text()) && /a\.md/.test(text()), "children listed");
     // select a file -> abstract shown, then overview and content
-    await click(window.document.querySelector(".ovb-row .main"));
+    // a directory must NOT offer the "content" tab (regression: "Directory URI is not readable as a file")
+    const rows = [...window.document.querySelectorAll(".ovb-row .main")];
+    const dirRow = rows.find((r) => /projects/.test(r.textContent));
+    await click(dirRow);
+    assert(!byText("content"), "directory has no content tab");
+    assert(!calls.some((c) => c.url.includes("/read?")), "no read request for a directory");
+    await click(window.document.querySelector(".ovb-row .main") && [...window.document.querySelectorAll(".ovb-row .main")].find((r) => /a\.md/.test(r.textContent)));
     assert(/ABSTRACT of/.test(text()), "abstract rendered");
     assert(!window.document.querySelector("img"), "abstract rendered as text only");
     await click(byText("overview"));

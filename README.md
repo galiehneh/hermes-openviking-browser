@@ -47,6 +47,35 @@ dashboard has been restarted. A "rescan" only refreshes the tab list.
 The repository root is the plugin directory (`plugin.yaml` and `dashboard/` live at the top level), so a plain
 `git clone` into `~/.hermes/plugins/` is a complete install. `git pull` plus a dashboard restart updates it. Reload any open dashboard tab afterwards (see Troubleshooting).
 
+## Install with an AI agent
+
+Already running an AI coding agent (Hermes Agent, Claude Code, Codex, OpenCode, ...) on the machine that hosts
+Hermes? Paste the prompt below and let it do the install. It only touches the plugin directory, `~/.hermes/.env`
+and the plugin list, and it must ask before restarting anything.
+
+```text
+Install the Hermes dashboard plugin "hermes-openviking-browser" on this machine.
+Repo: https://github.com/galiehneh/hermes-openviking-browser (read its README.md first).
+
+Do this step by step and report real command output, never invented results:
+1. Check prerequisites: `hermes --version`, a Hermes dashboard that is installed, and that my OpenViking
+   server answers: `curl -s <OPENVIKING_URL>/health`. Ask me for the OpenViking URL if you do not know it
+   (default http://127.0.0.1:1933).
+2. Clone the repo into the Hermes plugin directory:
+   `git clone https://github.com/galiehneh/hermes-openviking-browser ~/.hermes/plugins/openviking-browser`
+   (if the directory exists, run `git pull` instead; do not delete anything).
+3. Enable it: `hermes plugins enable openviking-browser`.
+4. Configure ~/.hermes/.env: set OPENVIKING_URL, and EITHER OPENVIKING_API_KEY OR OPENVIKING_CREDENTIALS_FILE
+   (a JSON file with an `agent_user_key` field). Use a USER key, never the root/admin key. Ask me where the key is.
+   Never print, log or commit the key.
+5. Tell me you are about to restart the Hermes dashboard (the backend routes mount only at startup) and WAIT for
+   my confirmation. Then restart it the way this machine runs it (systemd unit, `hermes dashboard`, or Docker).
+6. Verify: the plugin appears in `curl -s http://127.0.0.1:<dashboard-port>/api/dashboard/plugins`
+   as `openviking-browser`. The plugin API itself needs a dashboard login (401 without a cookie is expected).
+7. Tell me to open the dashboard, hard refresh (Ctrl+Shift+R), and look for the "OpenViking" tab.
+   If something fails, use the Troubleshooting section of the README and report the exact error.
+```
+
 ## Configuration
 
 | Variable | Default | Purpose |

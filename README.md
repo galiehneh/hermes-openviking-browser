@@ -45,7 +45,7 @@ Then **restart the dashboard**. Backend routes are mounted once at startup, so t
 dashboard has been restarted. A "rescan" only refreshes the tab list.
 
 The repository root is the plugin directory (`plugin.yaml` and `dashboard/` live at the top level), so a plain
-`git clone` into `~/.hermes/plugins/` is a complete install. `git pull` plus a dashboard restart updates it.
+`git clone` into `~/.hermes/plugins/` is a complete install. `git pull` plus a dashboard restart updates it. Reload any open dashboard tab afterwards (see Troubleshooting).
 
 ## Configuration
 
@@ -127,6 +127,8 @@ Error codes: `400 INVALID_URI`, `422` invalid parameters, `503 NO_CREDENTIALS`, 
 | `502 UPSTREAM_UNREACHABLE` | The dashboard host cannot reach `OPENVIKING_URL` (wrong URL, server down, firewall). |
 | `502` with an auth-related code | OpenViking rejected the key (401/403). Check that it is a valid user key for that server. |
 | `502 UPSTREAM_ERROR` | OpenViking returned a 5xx. Check the server logs. |
+| The tab still behaves like the old version after an update | The dashboard loads plugin scripts once per page load, so a tab that was already open keeps running the old code. Reload the page (F5, or a hard refresh with Ctrl+Shift+R). The server sends `Cache-Control: no-store` and `manifest.json` carries `?v=<version>`, so a reload always fetches the new script. |
+| "This is a directory, not a file" | OpenViking stores each document as a directory that holds the real file. Use the "Open <file>" / "Open directory" button, or select the nested file in the list. |
 
 ## Uninstall
 
@@ -147,7 +149,8 @@ pip install -r requirements-dev.txt   # fastapi, httpx, pydantic, pytest
 python -m pytest tests -q             # API tests (mocked upstream, no network, no real credentials)
 
 npm install                           # jsdom, react, react-dom (dev only)
-npm test                              # renders dashboard/plugin.js against canned responses
+npm test                              # jsdom: renders dashboard/plugin.js against canned responses,
+                                      # plus tests/dirs.test.cjs (the reader never reads a directory)
 ```
 
 The tests cover route-to-upstream mapping, rejection of non-whitelisted paths and write methods, URI validation,

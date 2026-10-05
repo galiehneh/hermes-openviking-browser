@@ -503,3 +503,53 @@ def test_source_has_no_hardcoded_key_and_never_reads_root_key():
     # OpenViking user keys look like base64.base64.hex
     assert not re.search(r"[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{40,}", src)
     assert re.search(r"agent_user_key", src)
+
+
+# ─── directories (v1.0.2): the UI resolves dir-ness via /stat and expects the upstream read error verbatim ──
+def test_stat_relays_is_dir_unchanged(env):
+    client, _calls, set_handler = env
+    seen = {}
+
+    def handler(req):
+        seen["path"], seen["uri"] = req.url.path, req.url.params.get("uri")
+        return httpx.Response(200, json={"status": "ok", "result": {"isDir": True, "size": 4096, "uri": seen.get("uri")}})
+
+    set_handler(handler)
+    uri = "viking://resources/projects/digital-receipt/build-and-versioning.md"
+    r = client.get(PREFIX + "/stat", params={"uri": uri})
+    assert r.status_code == 200
+    assert r.json()["result"]["isDir"] is True
+    assert (seen["path"], seen["uri"]) == ("/api/v1/fs/stat", uri)
+
+
+def test_read_of_directory_relays_upstream_message(env):
+    """The UI turns this exact upstream message into its directory hint; the proxy must not rewrite it."""
+    client, _calls, set_handler = env
+    msg = "Directory URI is not readable as a file: viking://resources/x.md. List it first, then read a file URI."
+    set_handler(lambda req: httpx.Response(400, json={
+        "status": "error", "result": None,
+        "error": {"code": "INVALID_ARGUMENT", "message": msg, "details": {"expected": "file", "actual": "directory"}}}))
+    r = client.get(PREFIX + "/read", params={"uri": "viking://resources/x.md"})
+    assert r.status_code == 400
+    assert r.json()["detail"] == {"code": "INVALID_ARGUMENT", "message": msg}
+
+
+def test_stat_uri_is_validated_and_root_allowed(env):
+    client, _calls, _ = env
+    assert client.get(PREFIX + "/stat", params={"uri": "viking://"}).status_code == 200
+    assert client.get(PREFIX + "/stat", params={"uri": "viking://resources/../x"}).status_code == 400
+
+
+# ─── release metadata ───────────────────────────────────────────────
+def test_versions_agree_and_entry_is_cache_busted():
+    root = API_FILE.parent.parent
+    manifest = json.loads((root / "dashboard" / "manifest.json").read_text())
+    version = manifest["version"]
+    assert re.search(rf"^version: {re.escape(version)}$", (root / "plugin.yaml").read_text(), re.M)
+    assert json.loads((root / "package.json").read_text())["version"] == version
+    lock = json.loads((root / "package-lock.json").read_text())
+    assert lock["version"] == version and lock["packages"][""]["version"] == version
+    # Hermes loads plugin scripts from /dashboard-plugins/<name>/<entry> with no version of its own.
+    assert manifest["entry"] == f"plugin.js?v={version}"
+    assert (root / "dashboard" / "plugin.js").is_file()
+    assert re.search(rf"^## \[{re.escape(version)}\]", (root / "CHANGELOG.md").read_text(), re.M)

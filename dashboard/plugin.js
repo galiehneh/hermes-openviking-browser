@@ -178,11 +178,48 @@
   }
 
   // ─── reader ───────────────────────────────────────────────────────
-  function Reader({ uri, entry }) {
+  // OpenViking stores every document as a directory holding the real file, and /read on a directory fails.
+  // So the content tab is only offered once the URI is known to be a file: from the listing entry when there
+  // is one, else from fs/stat (the selection can be a directory's own URI via › / breadcrumbs, a search hit, ...).
+  const NOT_A_FILE = /not readable as a file/i;
+
+  function knownKind(uri, entry) {
+    if (trimSlash(uri) === ROOT) return true;
+    return entry && typeof entry === "object" && typeof entry.isDir === "boolean" ? entry.isDir : null;
+  }
+
+  function DirNotice({ uri, browsing, onNavigate }) {
+    const ls = useLoad(() => get("/ls", { uri }), [uri]);
+    const items = Array.isArray(result(ls.data)) ? result(ls.data) : [];
+    const only = items.length === 1 && items[0] && items[0].isDir === false ? items[0] : null;
+    let msg = "This is a directory, not a file.";
+    if (ls.loading) msg += " Loading its files\u2026";
+    else if (!ls.error && only) msg += " It holds one file.";
+    else if (!ls.error && items.length === 0) msg += " It is empty.";
+    else if (!ls.error) msg += " It holds " + items.length + (items.length === 1 ? " entry" : " entries") + "; select a file from its list to read it.";
+    return h("div", { className: "ovb-muted" },
+      h("div", null, msg),
+      only ? h("button", { style: { marginTop: 8 }, onClick: () => onNavigate(uri, entryUri(only)) },
+        "Open " + baseName(entryUri(only))) : null,
+      !only && !browsing ? h("button", { style: { marginTop: 8 }, onClick: () => onNavigate(uri, uri) }, "Open directory") : null);
+  }
+
+  // Remounted per selection (see Browse): a new uri starts from a clean abstract tab with no stale state.
+  function Reader({ uri, entry, browsing, onNavigate }) {
     const [mode, setMode] = useState("abstract");
+    const [forcedDir, setForcedDir] = useState(false);
     const [content, setContent] = useState({ text: "", offset: 0, done: false, loading: false, error: null });
     const reqId = useRef(0);
-    const isDirEntry = !!(entry && typeof entry === "object" && entry.isDir === true);
+
+    const known = knownKind(uri, entry);
+    const st = useLoad(() => (known === null ? get("/stat", { uri }) : Promise.resolve(null)), [uri, known]);
+    const stat = result(st.data);
+    const statKind = stat && typeof stat === "object" && typeof stat.isDir === "boolean" ? stat.isDir : null;
+    const kind = forcedDir ? true : known !== null ? known : statKind;
+    const probing = kind === null && st.loading;
+    // kind === null after a failed stat: stay usable; a failing read is turned into the directory hint below.
+    const canRead = kind === false || (kind === null && !probing);
+    const isDir = kind === true;
 
     const ab = useLoad(
       () => (mode === "content" ? Promise.resolve(null) : get("/" + mode, { uri })),
@@ -203,24 +240,27 @@
             done: lines < READ_LINES, loading: false, error: null,
           }));
         },
-        (e) => id === reqId.current && setContent((c) => ({ ...c, loading: false, error: errMsg(e) })),
+        (e) => {
+          if (id !== reqId.current) return;
+          const m = errMsg(e);
+          if (NOT_A_FILE.test(m)) setForcedDir(true);
+          setContent((c) => ({ ...c, loading: false, error: NOT_A_FILE.test(m) ? null : m }));
+        },
       );
     }, [uri, content.offset]);
 
-    useEffect(() => {
-      reqId.current++;
-      setContent({ text: "", offset: 0, done: false, loading: false, error: null });
-      setMode("abstract");
-    }, [uri]);
+    useEffect(() => () => { reqId.current++; }, []);
 
     useEffect(() => {
-      if (mode === "content" && !isDirEntry) loadMore(true);
+      if (mode === "content" && canRead) loadMore(true);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mode, uri]);
+    }, [mode, canRead]);
 
     let body;
-    if (mode === "content" && isDirEntry) {
-      body = h("div", { className: "ovb-muted" }, "This is a directory. Open it with \u203a to list its files, then select a file to read its content.");
+    if (mode === "content" && isDir) {
+      body = null; // the directory notice above the tabs already explains
+    } else if (mode === "content" && probing) {
+      body = h("div", { className: "ovb-muted" }, "Checking\u2026");
     } else if (mode === "content") {
       body = h("div", null,
         content.error ? h("div", { className: "ovb-err" }, content.error) : null,
@@ -238,16 +278,17 @@
       body = h("pre", null, typeof text === "string" && text ? text : "(empty)");
     }
 
-    const e = entry && typeof entry === "object" ? entry : {};
+    const e = entry && typeof entry === "object" ? entry : stat && typeof stat === "object" ? stat : {};
     return h("div", null,
       h("div", { style: { fontWeight: 700, fontSize: 15, overflowWrap: "anywhere" } }, baseName(uri)),
       h("div", { className: "ovb-muted", style: { fontSize: 11, overflowWrap: "anywhere" } }, uri),
       h("div", { className: "ovb-meta" },
-        e.isDir === true ? h("span", null, "directory") : e.isDir === false ? h("span", null, "file") : null,
-        fmtBytes(e.size) ? h("span", null, fmtBytes(e.size)) : null,
+        isDir ? h("span", null, "directory") : kind === false ? h("span", null, "file") : null,
+        kind === false && fmtBytes(e.size) ? h("span", null, fmtBytes(e.size)) : null,
         e.modTime ? h("span", null, fmtDate(e.modTime)) : null),
+      isDir ? h("div", { style: { marginBottom: 10 } }, h(DirNotice, { uri, browsing, onNavigate })) : null,
       h("div", { className: "ovb-tabs", style: { marginBottom: 10 } },
-        (isDirEntry ? ["abstract", "overview"] : ["abstract", "overview", "content"]).map((m) =>
+        (canRead ? ["abstract", "overview", "content"] : ["abstract", "overview"]).map((m) =>
           h("button", { key: m, className: mode === m ? "on" : "", onClick: () => setMode(m) }, m))),
       body);
   }
@@ -262,11 +303,12 @@
         return da - db || baseName(entryUri(a) || "").localeCompare(baseName(entryUri(b) || ""));
       });
     const selEntry = entries.find((e) => entryUri(e) === selected);
+    const navigate = (d, s) => { setDir(d); setSelected(s); };
 
     return h("div", { className: "ovb-split" },
       h("div", { className: "ovb-pane ovb-list" },
         h("div", { className: "ovb-crumbs" },
-          crumbs(dir).map((c, i) => h("button", { key: i, onClick: () => { setDir(c.uri); setSelected(c.uri); } }, c.label))),
+          crumbs(dir).map((c, i) => h("button", { key: i, onClick: () => navigate(c.uri, c.uri) }, c.label))),
         ls.loading ? h("div", { className: "ovb-muted", style: { padding: 10 } }, "Loading…") : null,
         ls.error ? h("div", { className: "ovb-err", style: { padding: 10 } }, ls.error) : null,
         !ls.loading && !ls.error && entries.length === 0 ? h("div", { className: "ovb-muted", style: { padding: 10 } }, "Empty") : null,
@@ -278,10 +320,10 @@
               h("div", { className: "nm" }, (isDir ? "📁 " : "📄 ") + baseName(u)),
               e && e.abstract ? h("div", { className: "ab" }, e.abstract) : null),
             isDir ? h("button", { className: "go", title: "Open", "aria-label": "Open " + baseName(u),
-              onClick: () => { setDir(u); setSelected(u); } }, "›") : null);
+              onClick: () => navigate(u, u) }, "›") : null);
         })),
       h("div", { className: "ovb-pane ovb-read" },
-        selected ? h(Reader, { uri: selected, entry: selEntry })
+        selected ? h(Reader, { key: selected, uri: selected, entry: selEntry, browsing: selected === dir, onNavigate: navigate })
           : h("div", { className: "ovb-muted" }, "Select an item to read it.")));
   }
 

@@ -1,5 +1,5 @@
 name: openviking-browser
-version: 1.0.1
+version: 1.0.2
 description: "Read-only OpenViking browser for the Hermes dashboard: server status, viking:// tree, abstract/overview/content reader, find/grep/glob search and session list. The API key stays server-side."
 author: galiehneh
 license: MIT

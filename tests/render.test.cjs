@@ -16,6 +16,8 @@ const { window } = dom;
 global.IS_REACT_ACT_ENVIRONMENT = true;
 global.window = window;
 global.document = window.document;
+// Node 20 has no global `navigator`; react-dom reads it at load time.
+Object.defineProperty(globalThis, "navigator", { value: window.navigator, configurable: true, writable: true });
 
 const React = require("react");
 const { createRoot } = require("react-dom/client");

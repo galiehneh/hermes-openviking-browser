@@ -7,6 +7,10 @@ the dashboard.
 
 > Not affiliated with Nous Research or the OpenViking project.
 
+## Screenshot
+
+![OpenViking Browser tab in the Hermes dashboard](docs/screenshot.jpg)
+
 ## Features
 
 - **Status cards**: health, version, auth mode, queue (pending / in progress / errors), vector count, context counts,

@@ -1,0 +1,19 @@
+{
+  "name": "openviking-browser",
+  "label": "OpenViking",
+  "description": "Read-only browser for the OpenViking context database: status, viking:// tree, content reader, search and sessions",
+  "icon": "Database",
+  "version": "1.0.0",
+  "author": "galiehneh",
+  "license": "MIT",
+  "repository": "https://github.com/galiehneh/hermes-openviking-browser",
+  "tab": {
+    "path": "/openviking",
+    "position": "after:skills"
+  },
+  "entry": "plugin.js",
+  "css": null,
+  "api": "api.py",
+  "has_api": true,
+  "source": "user"
+}

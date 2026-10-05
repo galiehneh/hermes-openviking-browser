@@ -1,0 +1,19 @@
+{
+  "name": "hermes-openviking-browser",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dev-only manifest: dependencies for the dashboard render test. The plugin itself has no runtime dependencies.",
+  "license": "MIT",
+  "repository": "github:galiehneh/hermes-openviking-browser",
+  "scripts": {
+    "test": "node tests/render.test.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

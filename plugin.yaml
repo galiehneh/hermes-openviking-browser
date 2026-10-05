@@ -1,0 +1,21 @@
+name: openviking-browser
+version: 1.0.0
+description: "Read-only OpenViking browser for the Hermes dashboard: server status, viking:// tree, abstract/overview/content reader, find/grep/glob search and session list. The API key stays server-side."
+author: galiehneh
+license: MIT
+homepage: https://github.com/galiehneh/hermes-openviking-browser
+repository: https://github.com/galiehneh/hermes-openviking-browser
+tags:
+  - openviking
+  - memory
+  - knowledge-base
+  - dashboard
+  - read-only
+provides_tools: []
+dependencies: []
+requires_env: []
+dashboard:
+  label: OpenViking
+  icon: Database
+  path: /openviking
+  position: after:skills
